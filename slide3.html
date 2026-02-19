@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLMワークフローによる業務変革</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #5d5255;
+    --paper: #fffafb;
+    --accent: #ff9fb2;
+    --accent2: #a2e3d4;
+    --gold: #f9dcc4;
+    --muted: #b5a4a3;
+    --light-bg: #fff0f3;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background: var(--light-bg);
+    color: var(--ink);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* --- 強化されたナビゲーション機能 --- */
+  
+  /* 1. プログレスバー・コンテナ（区切り線付き） */
+  .progress-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 18px;
+    background: rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    z-index: 9999;
+    display: flex;
+  }
+  /* ページごとの縦線 */
+  .progress-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(to right, white 1px, transparent 1px);
+    background-size: calc(100% / 21) 100%; /* 全23ページで分割 */
+    pointer-events: none;
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  /* 2. ツールチップ（ホバー時のページガイド） */
+  #progressTooltip {
+    position: fixed;
+    top: 25px;
+    background: var(--ink);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
+    z-index: 10000;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  }
+
+  /* 3. スライド基本構造 */
+  .slides-wrapper { width: 100%; height: 100%; position: relative; }
+  .slide { position: absolute; inset: 0; display: none; overflow: hidden; flex-direction: column; justify-content: center; padding: 4vw 7vw; background: var(--paper); }
+  .slide.active { display: flex; animation: fadeUp 0.5s ease-out; }
+
+  /* 4. 各パーツのスタイル */
+  .slide-cover { background: var(--paper); align-items: flex-start; padding: 8vw 10vw; }
+  
+  /* 修正箇所：表紙ラベルの黄色背景を復活 */
+  .cover-eyebrow { 
+    background: var(--gold) !important; 
+    padding: 0.4rem 1.2rem; 
+    border-radius: 50px; 
+    font-size: 1.1rem; 
+    margin-bottom: 2rem; 
+    display: inline-block;
+    font-weight: 700;
+  }
+
+  .slide-section-label { font-family: 'Quicksand', sans-serif; font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.8rem; }
+  .slide-section-label::after { content: ''; flex: 1; height: 2px; background: var(--accent); opacity: 0.3; }
+  .slide-title { font-weight: 700; font-size: clamp(1.8rem, 3.2vw, 2.8rem); line-height: 1.3; margin-bottom: 1.5rem; color: var(--ink); }
+  
+  .bullet-list { list-style: none; display: flex; flex-direction: column; gap: 0.8rem; }
+  .bullet-list li { display: flex; align-items: flex-start; gap: 0.8rem; font-size: clamp(1rem, 1.2vw, 1.25rem); }
+  .bullet-list li::before { content: '✦'; color: var(--accent); font-size: 1.4rem; margin-top: 0.1rem; }
+
+  /* 目次用スタイル */
+
+  /* 目次のインタラクション */
+  .toc-list li {
+    cursor: pointer;
+    padding: 10px 18px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+  }
+  .toc-list li:hover {
+    background: white;
+    box-shadow: 0 4px 15px rgba(255, 159, 178, 0.2);
+    transform: translateX(12px);
+  }
+
+  .highlight-box {
+    display: block !important;
+    background-color: #fff0f5 !important;
+    border: 2px dashed #ff9fb2 !important;
+    border-radius: 20px !important;
+    padding: 1.2rem 1.8rem !important;
+    margin-top: 1.2rem !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    color: var(--ink) !important;
+    line-height: 1.6 !important;
+  }
+
+  .content-wrapper { display: flex; align-items: center; gap: 3.5rem; width: 100%; flex: 1; }
+  .image-area { flex: 0 0 45%; }
+  .text-area { flex: 1; }
+
+  .slide-image {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 25px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    border: 3px solid white;
+    background: white;
+  }
+
+  .section-divider { background: var(--accent); color: white; align-items: center; text-align: center; }
+  .section-divider .slide-title { color: white; font-size: 4rem; margin-bottom: 0; }
+
+  .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem; }
+  .tool-card { background: white; padding: 1.2rem; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+  .tool-name { color: var(--accent); font-weight: 900; font-size: 1.2rem; margin-bottom: 0.3rem; }
+
+  .nav { position: fixed; bottom: 3vh; right: 3vw; display: flex; gap: 1rem; align-items: center; z-index: 1000; }
+  .nav-btn { background: white; color: var(--accent); width: 50px; height: 50px; border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: none; font-size: 1.2rem; cursor: pointer; transition: transform 0.2s;}
+  .nav-btn:hover { transform: scale(1.1); }
+  .slide-counter { font-family: 'Quicksand'; font-weight: 700; color: var(--muted); font-size: 1.1rem; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="progress-container" id="progressContainer">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+<div id="progressTooltip">Page 1</div>
+
+<div class="slides-wrapper" id="slidesWrapper">
+
+    <div class="slide slide-cover active">
+    <div class="cover-eyebrow"><strong>生成AI「戦力化」の教科書：第4章</strong> ✨</div>
+    <h1 class="slide-title" style="font-size: 4.5rem;">LLMワークフロー<br>でしごとを変える</h1>
+    <p class="slide-body" style="border-left: 8px solid var(--accent); padding-left: 1.5rem;">プロンプトの限界を超えて、<br>AIをもっと頼れるパートナーに。</p>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Table of Contents</div>
+    <h2 class="slide-title">きょうお話しすること ✨</h2>
+    <div class="highlight-box" style="background: rgba(255,159,178,0.1) !important; border: none !important;">
+        <ul class="bullet-list toc-list">
+            <li onclick="jumpToSlide(2)"><strong style="color:var(--accent)">01</strong> 課題と解決策</li>
+            <li onclick="jumpToSlide(5)"><strong style="color:var(--accent)">02</strong> ツールの進化としくみ</li>
+            <li onclick="jumpToSlide(10)"><strong style="color:var(--accent)">03</strong> 代表的なツールの紹介</li>
+            <li onclick="jumpToSlide(12)"><strong style="color:var(--accent)">04</strong> 実践編！タスク分解のコツ</li>
+            <li onclick="jumpToSlide(16)"><strong style="color:var(--accent)">05</strong> 人間とAIの協働設計</li>
+            <li onclick="jumpToSlide(20)"><strong style="color:var(--accent)">06</strong> 明日からのアクション</li>
+        </ul>
+    </div>
+  </div>
+
+  <div class="slide section-divider">
+    <p style="font-family: Quicksand; font-size: 1.5rem; margin-bottom: 1rem;">Section 01</p>
+    <h2 class="slide-title">課題と解決策</h2>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 01 — 課題</div>
+    <h2 class="slide-title">「いいプロンプト」だけでは<br>足りない理由 💡</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide4.png" alt="混乱するAI" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.5rem;">🔻 プロンプトの限界</p>
+        <ul class="bullet-list" style="margin-bottom:1.2rem; gap:0.4rem;">
+          <li>指示が複雑になり、誰もが活用できる状態ではない</li>
+          <li>情報量の限界や長文読解の難しさで精度が安定しない</li>
+        </ul>
+        <div class="highlight-box" style="font-size: 1rem !important;">
+          単なる改善ではなく、<strong>業務プロセスの再設計</strong>で、AIが機能する環境を作ります。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 01 — 解決策</div>
+    <h2 class="slide-title">ワークフローが<br>叶えてくれること ✨</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide5.png" alt="解決のイメージ" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.5rem;">🔻 ワークフロー化のメリット</p>
+        
+        <ul class="bullet-list">
+          <li><strong style="width: 8rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">ステップ分解：</strong> 複雑な業務をAIが力を発揮できる小さな単位に分ける</li>
+          <li><strong style="width: 8rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">適切な情報：</strong> 必要な情報を最適なタイミングでAIへ提供する</li>
+          <li><strong style="width: 8rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">協働の最適化：</strong> 人間の介入ポイントを戦略的に配置する</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide section-divider" style="background: var(--accent2);">
+    <p style="font-family: Quicksand; font-size: 1.5rem; margin-bottom: 1rem; color: var(--ink);">Section 02</p>
+    <h2 class="slide-title" style="color: var(--ink);">ツールの進化と<br>しくみ</h2>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 02 — 歴史</div>
+    <h2 class="slide-title">第3世代に進化した<br>ワークフロー 🚀</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide7.png" alt="進化のイメージ" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.8rem;">🔻 ワークフローの変遷</p>
+        
+        <ul class="bullet-list" style="opacity: 0.6; margin-bottom: 1rem;">
+          <li><strong>第1世代：</strong> 書類回覧・承認（稟議の電子化）</li>
+          <li><strong>第2世代：</strong> システム間連携（Zapier等のSaaS連携）</li>
+        </ul>
+
+        <div class="highlight-box" style="margin-top: 0; padding: 1rem 1.5rem !important;">
+          <strong style="color: var(--accent); font-size: 1.3rem;">第3世代：LLM活用！</strong><br>
+          <span style="font-size: 1rem;">AI専用部品を繋ぎ、業務そのものを自動化する時代</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 02 — しくみ</div>
+    <h2 class="slide-title">「ノード」を繋いで<br>お仕事をつくる 🧩</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide8.png" alt="ワークフローの仕組み" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.5rem;">🔻 ワークフローの構成要素</p>
+        
+        <ul class="bullet-list" style="margin-bottom: 1.5rem;">
+          <li><strong style="color: var(--accent);">ノード：</strong> 処理の一つひとつのステップ</li>
+          <li><strong style="color: var(--accent);">エッジ：</strong> ステップを繋ぐ順序や依存関係</li>
+          <li>これらを繋いだ<strong style="color: var(--accent);">「グラフ」</strong>で業務を再現します。</li>
+        </ul>
+
+        <div class="highlight-box" style="padding: 1.2rem 1.5rem !important;">
+          <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 1rem; font-weight: 900;">🔻 活用イメージ：問い合わせ対応グラフ</p>
+          
+          <div style="display: flex; align-items: stretch; gap: 1.2rem;">
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 1rem; align-items: center; font-size: 0.9rem; flex: 1;">
+              <span style="color: var(--accent); font-weight: 700;">Step 1</span>
+              <strong style="color: var(--ink);">問い合わせの受信</strong>
+              
+              <span style="color: var(--accent); font-weight: 700;">Step 2</span>
+              <strong style="color: var(--ink);">内容の分析・重要度の判別</strong>
+              
+              <span style="color: var(--accent); font-weight: 700;">Step 3</span>
+              <strong style="color: var(--ink);">FAQや過去資料の検索</strong>
+              
+              <span style="color: var(--accent); font-weight: 700;">Step 4</span>
+              <strong style="color: var(--ink);">LLMによる回答案の作成</strong>
+              
+              <span style="color: var(--accent); font-weight: 700;">Step 5</span>
+              <strong style="color: var(--ink);">人間が確認して返信</strong>
+            </div>
+
+            <div style="flex: 0 0 11rem; background: #f9f8e0; border-radius: 15px; padding: 1rem; display: flex; align-items: center; justify-content: center;">
+              <p style="font-size: 0.85rem; font-weight: 700; color: var(--ink); line-height: 1.6; text-align: center;">
+                各ステップを<br>
+                <span style="color:var(--accent);">「条件分岐」</span>や<br>
+                <span style="color:var(--accent);">「ループ」</span>で繋ぎ、<br>
+                自動化します。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+ <div class="slide">
+    <div class="slide-section-label">Section 02 — モジュール</div>
+    <h2 class="slide-title">AIの力を引き出す！<br>自慢の部品（モジュール）たち 🛠️</h2>
+    
+    <div class="tool-grid" style="grid-template-columns: 1fr 1fr; gap: 1.2rem;">
+      <div class="tool-card">
+        <div class="tool-name">🤖 LLM呼び出し</div>
+        <p style="font-size: 0.85rem; line-height: 1.5; color: var(--muted);">
+          モデル選択やプロンプト構成の核となる部品。大規模な文書を扱う際は、AIが読み切れるようテキストを適切に「分割」する機能の有無が、精度を左右するポイントになります。
+        </p>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">🗄️ データベース連携</div>
+        <p style="font-size: 0.85rem; line-height: 1.5; color: var(--muted);">
+          必要な情報を保存・参照する「記憶」の役割です。文書業務では、RAG（検索拡張生成）を実現するために、テキストを検索しやすい形式で扱う「ベクトル検索」などの機能との組み合わせが推奨されます。
+        </p>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">📄 OCRモジュール</div>
+        <p style="font-size: 0.85rem; line-height: 1.5; color: var(--muted);">
+          画像やPDFをAIが読める文字データに変換します。文字だけでなく、グラフや図面の読み取りといった、人間が視覚的に行っている理解をAIで実現するために非常に有用なステップです。
+        </p>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">⚙️ コード実行（Python等）</div>
+        <p style="font-size: 0.85rem; line-height: 1.5; color: var(--muted);">
+          AIだけでは難しい計算や、複雑なデータの加工・整形をプログラミングコードで補完します。LLMの出力を加工したり、他のシステムとデータを繋ぎ込んだりする際に威力を発揮します。
+        </p>
+      </div>
+    </div>
+
+    <div class="highlight-box" style="margin-top: 1rem; padding: 1rem 1.5rem !important;">
+      <p style="font-size: 0.95rem;">
+        ✨ <strong>さらに！</strong> Teams, Slack, SharePoint, Google Driveなどの外部ツールと接続することで、AIがこなせる業務の幅は無限に広がります。
+      </p>
+    </div>
+  </div>
+
+  <div class="slide section-divider">
+    <p style="font-family: Quicksand; font-size: 1.5rem; margin-bottom: 1rem;">Section 03</p>
+    <h2 class="slide-title">代表的な<br>ツールの紹介</h2>
+  </div>
+
+<div class="slide">
+    <div class="slide-section-label">Section 03 — ツール選び</div>
+    <h2 class="slide-title">どれを使う？<br>人気のツールたち 🎨</h2>
+    
+    
+
+    <div class="tool-grid">
+      <div class="tool-card">
+        <div class="tool-name">Dify</div>
+        <p style="font-size: 0.8rem; line-height: 1.5; color: var(--muted);">
+          RAG機能が統合されたアプリ開発環境です。 Notion等のデータ取り込みが容易で、知識ベース活用に強みがあります。
+        </p>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">n8n</div>
+        <p style="font-size: 0.8rem; line-height: 1.5; color: var(--muted);">
+          400以上の外部連携が可能な自動化ツールです。 システム同士を高度に繋ぎ込む際に威力を発揮します。
+        </p>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">Copilot Studio</div>
+        <p style="font-size: 0.8rem; line-height: 1.5; color: var(--muted);">
+          Microsoft 365と緊密に統合されています。 TeamsやSharePoint上でのAIアシスト構築に特化しています。
+        </p>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">Ai Workforce</div>
+        <p style="font-size: 0.8rem; line-height: 1.5; color: var(--muted);">
+          LayerX提供の国産ツールです。 数百ページの文書処理や、高いセキュリティ要件に対応しています。
+        </p>
+      </div>
+    </div>
+
+    <div class="highlight-box" style="padding: 1.2rem 2rem !important;">
+      <p style="font-size: 0.9rem; color: var(--accent); margin-bottom: 0.8rem; font-weight: 900;">✨ 選び方のヒント</p>
+      
+      <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.6rem 2rem; align-items: center; font-size: 1.05rem;">
+        <span style="color: var(--muted); font-weight: 400;">🌸 手軽さ重視なら</span>
+        <strong style="color: var(--ink);">Dify</strong>
+        
+        <span style="color: var(--muted); font-weight: 400;">🔌 システム連携なら</span>
+        <strong style="color: var(--ink);">n8n</strong>
+        
+        <span style="color: var(--muted); font-weight: 400;">💻 MS製品の活用なら</span>
+        <strong style="color: var(--ink);">Copilot Studio</strong>
+        
+        <span style="color: var(--muted); font-weight: 400;">🛡️ セキュアな大規模文書なら</span>
+        <strong style="color: var(--ink);">Ai Workforce</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide section-divider" style="background: var(--accent2);">
+    <p style="font-family: Quicksand; font-size: 1.5rem; margin-bottom: 1rem; color: var(--ink);">Section 04</p>
+    <h2 class="slide-title" style="color: var(--ink);">実践編！<br>タスク分解のコツ</h2>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 04 — 考え方</div>
+    <h2 class="slide-title">AIは「しごできな<br>新入社員」です 🐣</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide13.png" alt="新入社員イメージ" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.8rem;">🔻 AIを「即戦力」にするための心得</p>
+        
+        <ul class="bullet-list" style="margin-bottom: 1.5rem;">
+  <li style="display: flex; align-items: flex-start;">
+    <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">丁寧なマニュアル：</strong>
+    <span>LLMが迷わないための詳細な手順（プロンプト）を用意する</span>
+  </li>
+  <li style="display: flex; align-items: flex-start;">
+    <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">暗黙知の言語化：</strong>
+    <span>ベテランの「なんとなく」を論理的なステップへ分解する</span>
+  </li>
+  <li style="display: flex; align-items: flex-start;">
+    <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">入出力の定義：</strong>
+    <span>何を読み、どう考え、何を出すかを一貫性を持って指示する</span>
+  </li>
+</ul>
+
+        <div class="highlight-box" style="padding: 1rem 1.5rem !important;">
+          <p style="font-size: 0.95rem; line-height: 1.5;">
+            <strong>💡 なぜ「新入社員」なのか？</strong><br>
+            論理的思考力（地頭）は抜群に良いものの、「社内ルールや背景」を全く知らない前提で接することが、設計成功の近道だからです。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 04 — 具体例</div>
+    <h2 class="slide-title">契約書チェックを<br>分けてみると？ ⚖️</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide14.png" alt="契約書フロー" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.8rem;">🔻 タスク分解のステップ例</p>
+        
+        <ul class="bullet-list" style="margin-bottom: 1.5rem;">
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">当事者抽出：</strong>
+            <span>契約書の冒頭から、甲・乙それぞれの会社名や住所を正確に探す</span>
+          </li>
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">重要項目の特定：</strong>
+            <span>本文から有効期間、解約条件、損害賠償などの重要箇所を抜き出す</span>
+          </li>
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">ルール照合：</strong>
+            <span>自社のリーガルポリシーや基準と合っているか、不利益がないか判定する</span>
+          </li>
+        </ul>
+
+        <div class="highlight-box" style="padding: 1rem 1.5rem !important;">
+          <p style="font-size: 0.95rem; line-height: 1.5;">
+            <strong>💡 分解のメリット</strong><br>
+            一気に「チェックして」と頼むと精度が落ちますが、このように<strong>ステップを分けることで、AIの「見落とし」を劇的に減らす</strong>ことができます。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 04 — 実装</div>
+    <h2 class="slide-title">まずはアナログから<br>はじめよう 📝</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide15.png" alt="計画のイメージ" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.8rem;">🔻 アナログ設計の手順</p>
+        
+        <ul class="bullet-list">
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">流れの可視化：</strong>
+            <span>ホワイトボードや付箋で流れを可視化</span>
+          </li>
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">入出力の明確化：</strong>
+            <span>各ステップの「入力」と「出力」を明確にする</span>
+          </li>
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">分割と再試行：</strong>
+            <span>難しい所はさらに細かく分割して再試行</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide section-divider">
+    <p style="font-family: Quicksand; font-size: 1.5rem; margin-bottom: 1rem;">Section 05</p>
+    <h2 class="slide-title">人間とAIの<br>いい関係づくり</h2>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 05 — 協働</div>
+    <h2 class="slide-title">「自然に繋がれる」<br>領域から任せる 🤝</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide17.png" alt="自然な連携" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.8rem;">🔻 任せる価値がある「3つの条件」</p>
+        <ul class="bullet-list" style="margin-bottom:1.2rem; gap: 1.2rem;">
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 9rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">お膳立て不要：</strong>
+            <span>人間が過剰な準備をせず、普段のファイルを投げるだけで動くか</span>
+          </li>
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 9rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">時間の削減：</strong>
+            <span>部分的な適用であっても、十分に業務時間が減るか</span>
+          </li>
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 9rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">レビュー容易：</strong>
+            <span>人間が自然な流れで、精度を確認・担保できるか</span>
+          </li>
+        </ul>
+        <div class="highlight-box" style="font-size: 0.95rem !important;">
+          AIへ渡すための「お膳立て」にコストがかかるなら、無理に自動化しないのが正解です。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 05 — 確認</div>
+    <h2 class="slide-title">「確認のコスト」を<br>最小限に抑える ✅</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide18.png" alt="レビューのデザイン" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.8rem;">🔻 精度と効率を両立させるコツ</p>
+        <ul class="bullet-list" style="gap: 1.2rem;">
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">新入社員として扱う：</strong>
+            <span>LLMの仕事は新入社員の仕事と捉え、常にレビューを行う。ただし、人が正解かどうかを判断しやすい入出力を設計すること。</span>
+          </li>
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">根拠を明示する：</strong>
+            <span>Ai Workforceのように、処理結果の根拠を元文書からハイライトして探しやすくする機能を活用。</span>
+          </li>
+        </ul>
+        <div class="highlight-box" style="margin-top: 1.5rem; font-size: 0.95rem !important;">
+          こうしたアシストでレビューが容易になれば、効率と精度のバランスを十分に保つことができます。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide section-divider" style="background: var(--accent2);">
+    <p style="font-family: Quicksand; font-size: 1.5rem; margin-bottom: 1rem; color: var(--);">Section 06</p>
+    <h2 class="slide-title" style="color: var(--ink);">さいごに。<br>明日からのこと</h2>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Section 06 — アクション</div>
+    <h2 class="slide-title">まずは、ちいさな<br>成功事例を作ろう ⛄</h2>
+    <div class="content-wrapper">
+      <div class="image-area"><img src="image-slide20.png" alt="最初の一歩" class="slide-image"></div>
+      <div class="text-area">
+        <p style="font-weight:bold; color:var(--muted); margin-bottom:0.8rem;">🔻 明日から取り組むステップ</p>
+        
+        <ul class="bullet-list">
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">まずは触る：</strong>
+            <span>ツールを自ら触って親しむ</span>
+          </li>
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">業務を選ぶ：</strong>
+            <span>頻度が高く面倒な業務を選ぶ</span>
+          </li>
+          <li style="display: flex; align-items: flex-start;">
+            <strong style="width: 11rem; flex-shrink: 0; white-space: nowrap; color: var(--accent);">成功させる：</strong>
+            <span>小さな成功が変革の鍵です</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <div class="slide-section-label">Conclusion</div>
+    <h2 class="slide-title">しごとをもっと<br>たのしく、軽やかに。 ✨</h2>
+    
+    <div class="image-area" style="width: 100%; margin: 0 auto 2rem auto;">
+      <img src="image-slide21.png" alt="ワークフロー思考のイメージ" class="slide-image" 
+           style="width: 100%; height: 300px; object-fit: cover; object-position: top; border-radius: 20px;">
+    </div>
+    
+    <div class="highlight-box" style="text-align: center; font-size: 1.2rem !important;">
+      「ワークフロー思考」で、AIを真の戦略的資産へ。
+    </div>
+    <p class="slide-body" style="margin-top:2rem; text-align:center; font-size: 1.1rem; opacity: 0.6;">
+      ありがとうございました 🌸
+    </p>
+  </div>
+
+</div>
+
+<div class="nav">
+  <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">◀</button>
+  <span class="slide-counter" id="slideCounter">1 / 23</span>
+  <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">▶</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+  const tooltip = document.getElementById('progressTooltip');
+  const container = document.getElementById('progressContainer');
+
+  function updateSlides() {
+    slides.forEach((s, i) => {
+      s.style.display = i === current ? 'flex' : 'none';
+      s.classList.toggle('active', i === current);
+    });
+    document.getElementById('slideCounter').textContent = (current + 1) + ' / ' + slides.length;
+    document.getElementById('progressBar').style.width = ((current + 1) / slides.length * 100) + '%';
+  }
+
+  function changeSlide(dir) {
+    current = Math.max(0, Math.min(slides.length - 1, current + dir));
+    updateSlides();
+  }
+
+  function jumpToSlide(index) {
+    current = index;
+    updateSlides();
+  }
+
+  // --- プログレスバー・インタラクション ---
+  
+  container.addEventListener('mousemove', (e) => {
+    const rect = container.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    const targetIndex = Math.floor(ratio * slides.length);
+    if (targetIndex < 0 || targetIndex >= slides.length) return;
+    
+    // タイトルの取得
+    const title = slides[targetIndex].querySelector('.slide-title')?.innerText.replace(/\n/g, ' ') || 'Slide';
+    
+    tooltip.style.display = 'block';
+    tooltip.style.left = e.clientX + 'px';
+    tooltip.textContent = `Page ${targetIndex + 1}: ${title}`;
+  });
+
+  container.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+
+  container.addEventListener('click', (e) => {
+    const rect = container.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    current = Math.floor(ratio * slides.length);
+    updateSlides();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') changeSlide(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                   changeSlide(-1);
+  });
+
+  updateSlides();
+</script>
+</body>
+</html>
