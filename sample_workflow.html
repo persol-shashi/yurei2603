@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部内プレゼン：AI時代のドキュメント戦略</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #5d5255;
+    --paper: #ffffff;
+    --accent: #ff9fb2;   /* ピンク */
+    --accent2: #a2e3d4;  /* ミント */
+    --gold: #f9dcc4;    /* ピーチ/ゴールド */
+    --muted: #b5a4a3;
+    --light-bg: #fff0f3;
+    --shadow: 0 10px 30px rgba(93, 82, 85, 0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background: var(--light-bg);
+    color: var(--ink);
+    line-height: 1.7;
+    padding: 60px 20px;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  header h1 {
+    font-size: 2.2rem;
+    color: var(--ink);
+    margin-bottom: 15px;
+    letter-spacing: 0.05em;
+    line-height: 1.3;
+  }
+
+  header p {
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  .section-card {
+    background: var(--paper);
+    border-radius: 24px;
+    padding: 40px;
+    margin-bottom: 50px;
+    position: relative;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255, 159, 178, 0.2);
+  }
+
+  .section-label {
+    position: absolute;
+    top: -18px;
+    left: 30px;
+    background: var(--accent);
+    color: white;
+    padding: 6px 24px;
+    border-radius: 50px;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 10px rgba(255, 159, 178, 0.4);
+  }
+
+  h2 {
+    font-size: 1.6rem;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--ink);
+  }
+
+  .intro-text {
+    margin-bottom: 25px;
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  @media (max-width: 600px) {
+    .comparison-grid { grid-template-columns: 1fr; }
+  }
+
+  .box {
+    background: #fffafa;
+    border: 2px solid #fef0f2;
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .box-title {
+    font-weight: 900;
+    display: block;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    text-align: center;
+  }
+
+  .box.ai { border-color: var(--accent2); background: #f0fdfa; }
+  .box.ai .box-title { color: #4a7a6f; }
+
+  .highlight-box {
+    background: var(--gold);
+    padding: 20px;
+    border-radius: 18px;
+    margin: 25px 0;
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .bullet-list {
+    list-style: none;
+    margin: 15px 0;
+  }
+
+  .bullet-list li {
+    position: relative;
+    padding-left: 25px;
+    margin-bottom: 12px;
+  }
+
+  .bullet-list li::before {
+    content: '✦';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  .point-item {
+    background: #ffffff;
+    border: 1px solid var(--gold);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+  }
+
+  .point-num {
+    color: var(--accent);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    margin-right: 10px;
+  }
+
+  .illustration-area {
+    width: 100%;
+    margin-bottom: 30px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  }
+
+  .illustration-area img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  code {
+    background: #f1f1f1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>AI時代の「脱・資料作成」戦略</h1>
+    <p>〜 Markdownを起点に、ビジュアル化はAIに任せる 〜</p>
+  </header>
+
+  <section class="section-card">
+    <div class="section-label">PROBLEM STATEMENT</div>
+    <h2><span>❓</span> なぜ資料があるのにAIに聞くのか？</h2>
+    
+    <div class="illustration-area">
+      <img src="wf00.png" alt="資料とAIの対比イラスト">
+    </div>
+
+    <p class="intro-text">社内には資料が溢れているのに、なぜ私たちはGeminiや同僚に聞き直してしまうのでしょうか。</p>
+    
+    <div class="comparison-grid">
+      <div class="box">
+        <span class="box-title">既存資料の限界</span>
+        <ul class="bullet-list" style="font-size: 0.85rem;">
+          <li>背景や前提知識が省略されている</li>
+          <li>自分の状況への「翻訳」が必要</li>
+          <li>静的で一方通行（疑問に答えない）</li>
+        </ul>
+      </div>
+      <div class="box ai">
+        <span class="box-title">AIが提供してくれるもの</span>
+        <ul class="bullet-list" style="font-size: 0.85rem;">
+          <li>自分の理解度に合わせて噛み砕いた解説</li>
+          <li>自分の役割に必要な点だけを「翻訳」してくれる</li>
+          <li>一方的な情報の受け取りではなく、対話で疑問を解消</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-card">
+    <div class="section-label">STRATEGY</div>
+    <h2><span>🧠</span> AIと「最高の相性」を構築する</h2>
+    <div class="highlight-box">
+      AIと最も相性がいいのは、<br><strong>「構造化されたテキスト」</strong> × <strong>「文脈が維持されたディレクトリ管理」</strong>です。
+    </div>
+    
+    <div class="point-item">
+      <strong class="point-num">01</strong><strong>構造化テキスト（Markdown）</strong>
+      <p style="font-size: 0.9rem; margin-top:5px;">AIにとってレイアウト調整（Excel/PPT）は「ノイズ」に過ぎません。見出しと箇条書きで論理を記号化したMarkdownこそが、AIにとって最強の燃料となります。</p>
+    </div>
+    <div class="point-item">
+      <strong class="point-num">02</strong><strong>ディレクトリ管理（GitHub型）</strong>
+      <p style="font-size: 0.9rem; margin-top:5px;">「情報の散らばり」はAI活用の天敵。GitHub、ストレージサービスなど「どのフォルダに何の文脈があるか」というディレクトリ構造を渡すことで、AIは情報の「地図（パス）」を正しく把握し、精度の高い回答が可能になります。</p>
+    </div>
+  </section>
+
+  <section class="section-card">
+    <div class="section-label" style="background: var(--muted);">RISK & MEASURES</div>
+    <h2><span>⚠️</span> 実践の落とし穴と対策</h2>
+    <div class="point-item" style="border-color: #eee;">
+      <p style="font-size: 0.9rem;"><strong>1. 学習コストの壁：</strong> 人によって心理的なハードルが高いため、いきなり記法を強いるのではなく、Notion等のツールから導入し徐々に構造化に慣れる工夫が必要です。</p>
+    </div>
+    <div class="point-item" style="border-color: #eee;">
+      <p style="font-size: 0.9rem;"><strong>2. AIの誤情報の懸念：</strong> AIはあくまで要約・翻訳。重要事項は必ず原本（Markdown）を突き合わせる運用を徹底しましょう。</p>
+    </div>
+    <div class="point-item" style="border-color: #eee;">
+      <p style="font-size: 0.9rem;"><strong>3. 情熱の欠如：</strong> AIのスライドは「標準的」になりがちです。勝負所の企画書だけは、人間がビジュアルに熱を込めるべきです。</p>
+    </div>
+  </section>
+
+  <section class="section-card">
+    <div class="section-label">TOMORROW'S ACTION</div>
+    <h2><span>🚀</span> 明日から取り組む「脱却」</h2>
+    <ul class="bullet-list">
+      <li><strong>脱Excel/PPTX：</strong> 構成案はまずテキスト（Markdown）で書く。レイアウトに時間を奪われない。</li>
+      <li><strong>コンテキスト管理の開始：</strong> ファイルを散らさず、GitHub的な「意味のあるディレクトリ構造」で原本を保管する。</li>
+      <li><strong>AI連携の日常化：</strong> 構造化されたフォルダ情報をAIにインプットし、スライド化や要約などの「ビジュアル生成」を外注する。</li>
+    </ul>
+
+    <div class="highlight-box" style="background: var(--accent2); color: #4a7a6f;">
+      結論：人間は「問いと構造（地図）」を作り、AIが「表現とビジュアル」を作る。<br>次世代の部内プレゼン術をここから始めましょう。
+    </div>
+  </section>
+
+  <footer>
+    &copy; 2026 次世代サービス
+  </footer>
+</div>
+
+</body>
+</html>
